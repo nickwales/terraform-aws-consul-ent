@@ -1,0 +1,112 @@
+#------------------------------------------------------------------------------
+# General
+#------------------------------------------------------------------------------
+friendly_name_prefix = "hashicat"
+
+common_tags = {
+  deployment = "consul"
+  site       = "westeros"
+}
+asg_hook_value   = "hashicat-18f919-us-east-2-consul-asg-hook"
+ssh_keypair_name = "hashicat-18f919-consul-keypair"
+
+# Commented to ensure people are prompted if they don't set this
+# region =
+
+#------------------------------------------------------------------------------
+# Logging Configuration
+#------------------------------------------------------------------------------
+cloudwatch_log_group_name = "hashicat-18f919-consul-log-group"
+log_forwarding_enabled    = true
+
+#------------------------------------------------------------------------------
+# Secrets Manager Configuration
+#------------------------------------------------------------------------------
+ca_bundle_secret_arn   = "arn:aws:secretsmanager:us-east-2:441170333099:secret:hashicat-18f919-consul-ca-bundle-uve4Mn"
+private_key_secret_arn = "arn:aws:secretsmanager:us-east-2:441170333099:secret:hashicat-18f919-consul-private-CBQMgq"
+cert_secret_arn        = "arn:aws:secretsmanager:us-east-2:441170333099:secret:hashicat-18f919-consul-public-v6RvLa"
+consul_secrets_arn     = "arn:aws:secretsmanager:us-east-2:441170333099:secret:hashicat-18f919-consul-Jxubzp"
+
+#------------------------------------------------------------------------------
+# IAM Configuration
+#------------------------------------------------------------------------------
+iam_instance_profile_arn = "arn:aws:iam::441170333099:instance-profile/hashicat-18f919-us-east-2-consul-deployment-role"
+
+#------------------------------------------------------------------------------
+# Network Configuration
+#------------------------------------------------------------------------------
+vpc_id         = "vpc-0ece2d3e044e76508"
+ec2_subnet_ids = ["subnet-04a83d2c702b4d966", "subnet-049e26685e213e45f", "subnet-0d7f949306e478ac7"]
+
+route53_resolver_pool = {
+  enabled = false
+}
+
+#------------------------------------------------------------------------------
+# LB Configuration
+#------------------------------------------------------------------------------
+lb_type    = "network"
+lb_tg_arns = ["arn:aws:elasticloadbalancing:us-east-2:441170333099:targetgroup/hashicat-18f919-consul-api-tls-tg/43c29e5e1272d716"]
+
+#------------------------------------------------------------------------------
+# KMS Configuration
+#------------------------------------------------------------------------------
+kms_key_arn = "arn:aws:kms:us-east-2:441170333099:alias/hashicat-18f919-consul-kms-key-alias"
+
+#------------------------------------------------------------------------------
+# Consul Server Configuration
+#------------------------------------------------------------------------------
+consul_server_cluster_version  = "0.0.1"
+consul_server_environment_name = "primary"
+
+consul_server_agent = {
+  auto_reload_config = true
+  server             = true
+  ui                 = true
+  join_environment   = "primary"
+  security_group_id  = "sg-09d7431a8786030a6"
+}
+
+snapshot_agent = {
+  enabled        = true
+  interval       = "30m"
+  retention      = 0
+  s3_bucket_name = "arn:aws:s3:::hashicat-18f919-consul-westeros-snapshots-us-east-2"
+}
+
+
+#------------------------------------------------------------------------------
+# Consul Agent Configuration
+#------------------------------------------------------------------------------
+
+consul_agent = {
+  auto_reload_config = true
+  server             = false
+  ui                 = false
+  join_environment   = "primary"
+  security_group_id  = "sg-02707b15041781335"
+}
+
+consul_agent_environment_name = "agent-primary"
+consul_agent_cluster_version  = "0.0.1"
+
+#------------------------------------------------------------------------------
+# Consul Gateway Configuration
+#------------------------------------------------------------------------------
+consul_gateway_environment_name = "gateway-primary"
+consul_gateway_cluster_version  = "0.0.1"
+
+ingress_gateway = {
+  enabled           = true
+  container_image   = "envoyproxy/envoy:v1.25.4"
+  service_name      = "ingress-gateway"
+  listener_ports    = ["8081", "8082", "8083"]
+  ingress_cidrs     = ["0.0.0.0/0"]
+  security_group_id = "sg-0a2cdab8a33fef66d"
+}
+
+terminating_gateway = {
+  enabled         = true
+  container_image = "envoyproxy/envoy:v1.25.4"
+  service_name    = "terminating-gateway"
+}

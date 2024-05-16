@@ -1,0 +1,10 @@
+function have_program {
+  [ -x "$(which $1)" ]
+}
+
+function log {
+  local log_message="$1"
+  local timestamp=$(date +"%Y-%m-%d %H:%M:%S")
+  local product="${product}"
+  echo "$timestamp - $product - $log_message" >> "$LOGFILE"
+}

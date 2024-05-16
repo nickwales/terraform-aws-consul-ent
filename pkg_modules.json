@@ -1,0 +1,10 @@
+{
+  "ext_modules": [],
+  "prereq": [
+    {
+      "name": "cloud_init",
+      "caller": "main.tf",
+      "source": "./modules/cloud_init"
+    }
+  ]
+}

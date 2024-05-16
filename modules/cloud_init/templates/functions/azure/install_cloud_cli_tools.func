@@ -1,0 +1,30 @@
+function install_cloud_cli_tools {
+  %{if airgap_install && !pkg_repos_reachable_with_airgap ~}
+  log [INFO] Checking if ${cloud}-cli is installed for airgap install"
+  if ! have_program az; then
+    log "[ERROR] '${cloud}-cli' not detected on system. Ensure '${cloud}-cli' is installed on image before running."
+    exit_script 5
+  fi
+  %{ endif ~}
+  if have_program az; then
+    log [INFO] Detected 'az' is already installed. Skipping."
+  elif [[ "$OS_DISTRO" == "ubuntu" ]]; then
+    curl -sL https://aka.ms/InstallAzureCLIDeb | sudo bash
+  elif [[ "$OS_DISTRO" == "red" ]] || [[ "$OS_DISTRO" == "centos" ]]; then
+    rpm --import https://packages.microsoft.com/keys/microsoft.asc
+    sudo bash -c "cat > /etc/yum.repos.d/azure-cli.repo" <<EOF
+[azure-cli]
+name=Azure CLI
+baseurl=https://packages.microsoft.com/yumrepos/azure-cli
+enabled=1
+gpgcheck=1
+gpgkey=https://packages.microsoft.com/keys/microsoft.asc
+EOF
+
+    sudo yum install -y azure-cli
+  fi
+
+  log [INFO] Authenticating to Azure via Managed Service Identity..."
+  az login --identity
+  log [INFO] Authenticated to Azure via Managed Service Identity."
+}

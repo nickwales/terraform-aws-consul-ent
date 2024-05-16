@@ -1,0 +1,10 @@
+function scrape_vm_info() {
+  echo "[$(date +"%FT%T")] [INFO] Scraping virtual machine information..." | tee -a $LOGFILE
+
+  VM_PRIVATE_IP=$(curl -H "Metadata-Flavor: Google" http://metadata.google.internal/computeMetadata/v1/instance/network-interfaces/0/ip)
+
+  OS_DISTRO=$(sed -n 's/^NAME="\(.*\)".*$/\1/p' /etc/os-release | cut -d" " -f1 | tr '[:upper:]' '[:lower:]')
+  ARCH=$(uname -m | sed 's/x86_64/amd64/;s/aarch64/arm64/')
+
+  echo "[$(date +"%FT%T")] [INFO] Done scraping virtual machine information." | tee -a $LOGFILE
+}

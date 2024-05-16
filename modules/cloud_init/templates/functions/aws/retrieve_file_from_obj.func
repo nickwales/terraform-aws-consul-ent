@@ -1,0 +1,12 @@
+function retrieve_file_from_obj {
+  local src="$1"
+  local dst="$2"
+
+  if [[ "$src" == "" ]]; then
+    log "[ERROR] Did not detect a valid path for S3 objects."
+    exit_script 10
+  else
+    log "[INFO] Copying $src to $dst..."
+    aws s3 cp "$src" "$dst"
+  fi
+}

@@ -1,0 +1,53 @@
+function install_cloud_cli_tools {
+  %{if airgap_install && !pkg_repos_reachable_with_airgap ~}
+  log "[INFO] Checking if ${cloud}-cli is installed for airgap install"
+  if ! have_program aws; then
+    echo "[ERROR] '${cloud}-cli' not detected on system. Ensure '${cloud}-cli' is installed on image before running."
+    exit_script 5
+  fi
+  %{ endif ~}
+  if have_program aws; then
+    aws_cli_version=$(aws --version | awk '{print $1}' | awk -F/ '{print $2}' | awk -F. '{print $1}')
+    if [ "$aws_cli_version" = "1" ]; then
+      log "[WARNING] AWS CLI VERSION 1 IS INSTALLED. THIS COULD LEAD TO UNEXPECTED BEHAVIOR. PLEASE UPGRADE TO VERSION 2"
+    else
+      log "[INFO] AWS CLI is installed and major version release is $aws_version. Continuing"
+    fi
+  else
+    curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
+    unzip -qq awscliv2.zip
+    ./aws/install
+    rm -f ./awscliv2.zip && rm -rf ./aws
+  fi
+
+  %{ if log_forwarding_enabled }
+  log "[INFO] Installing Cloudwatch Logs agent"
+  if [[ $OS_DISTRO == "ubuntu" ]]; then
+      CW_AGENT_REPO="https://s3.amazonaws.com/amazoncloudwatch-agent/ubuntu/$ARCH/latest/amazon-cloudwatch-agent.deb"
+  elif [[ $OS_DISTRO == "amazon" ]]; then
+      CW_AGENT_REPO="https://s3.amazonaws.com/amazoncloudwatch-agent/amazon_linux/$ARCH/latest/amazon-cloudwatch-agent.rpm"
+  elif [[ $OS_DISTRO == "red" || $OS_DISTRO == "centos" ]]; then
+      CW_AGENT_REPO="https://s3.amazonaws.com/amazoncloudwatch-agent/redhat/$ARCH/latest/amazon-cloudwatch-agent.rpm"
+  fi
+
+  wget $CW_AGENT_REPO
+  if have_program amazon-cloudwatch-agent-ctl; then
+    log "[INFO] Detected 'cloudwatch logs agent' already installed."
+  else
+    if have_program apt-get; then
+      dpkg -i -E ./amazon-cloudwatch-agent.deb
+    else
+      rpm -U ./amazon-cloudwatch-agent.rpm
+    fi
+  fi
+  tee /opt/aws/amazon-cloudwatch-agent/etc/amazon-cloudwatch-agent.json >/dev/null <<'EOL'
+
+${cloud_logs_cfg}
+
+EOL
+
+  amazon-cloudwatch-agent-ctl -a fetch-config -c file:/opt/aws/amazon-cloudwatch-agent/etc/amazon-cloudwatch-agent.json
+  amazon-cloudwatch-agent-ctl -a start
+  amazon-cloudwatch-agent-ctl -a status
+  %{ endif ~}
+}

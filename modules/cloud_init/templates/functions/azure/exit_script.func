@@ -1,0 +1,9 @@
+function exit_script() {
+  if [[ "$1" == 0 ]]; then
+    log [INFO] custom_data script finished successfully!"
+  else
+    log [ERROR] custom_data script finished with error code $1."
+  fi
+
+  exit "$1"
+}

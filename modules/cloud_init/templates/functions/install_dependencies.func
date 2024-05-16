@@ -1,0 +1,91 @@
+function install_dependencies {
+ %{~ if product == "tfe"~}
+ %{~ if airgap_install && !pkg_repos_reachable_with_airgap ~}
+  log [INFO] [Terraform Enterprise] Checking if prereq software dependencies exist for airgap install"
+  for package in $REQUIRED_PACKAGES; do
+    if ! have_program "$package" > /dev/null; then
+      log [ERROR] [Terraform Enterprise] '$package' not detected on system. Ensure '$package' is installed on image before running."
+      exit_script 2
+    fi
+  done
+  %{~ endif ~}
+  %{~ endif ~}
+
+  # Determine package manager to use
+  if have_program apt-get; then
+    package_manager="apt-get"
+    $package_manager update -y
+    $package_manager install -y $REQUIRED_PACKAGES
+  elif have_program yum; then
+    package_manager="yum"
+      if [[ $OS_DISTRO == "red" ]]; then
+        $package_manager install -y https://dl.fedoraproject.org/pub/epel/epel-release-latest-7.noarch.rpm
+      elif [[ $OS_DISTRO == "centos" ]]; then
+        $package_manager install -y epel-release
+      fi
+    $package_manager update -y
+    $package_manager install -y $REQUIRED_PACKAGES
+  fi
+
+  %{~ if product == "tfe" ~}
+  %{~ if install_docker_before || pkg_repos_reachable_with_airgap && airgap_install ~}
+  if have_program docker; then
+    log "[INFO] Detected 'docker' is already installed. Skipping."
+  else
+    if [[ "$OS_DISTRO" == "ubuntu" ]]; then
+      # https://docs.docker.com/engine/install/ubuntu/
+      log "[INFO] Installing Docker for Ubuntu (Focal)."
+      curl -fsSL https://download.docker.com/linux/ubuntu/gpg | gpg --dearmor -o /usr/share/keyrings/docker-archive-keyring.gpg
+      echo \
+      "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/docker-archive-keyring.gpg] https://download.docker.com/linux/ubuntu \
+      $(lsb_release -cs) stable" | tee /etc/apt/sources.list.d/docker.list > /dev/null
+      $package_manager update -y
+      DOCKER_VERSION="5:${docker_version}-1~ubuntu.$(lsb_release -r | awk '{print $2}')~$(lsb_release -cs)"
+      $package_manager install -y docker-ce="$${DOCKER_VERSION}" docker-ce-cli=$${DOCKER_VERSION} containerd.io docker-compose-plugin
+    elif [[ "$OS_DISTRO" == "centos" ]]; then
+      DOCKER_VERSION="${docker_version}"
+      # https://docs.docker.com/engine/install/centos/
+      log "[INFO] Installing Docker for CentOS."
+      $package_manager install -y yum-utils
+      yum-config-manager --add-repo https://download.docker.com/linux/centos/docker-ce.repo
+      $package_manager install -y docker-ce-$${DOCKER_VERSION}-1.el7 docker-ce-$${DOCKER_VERSION}-1.el7 containerd.io
+    elif [[ "$OS_DISTRO" == "red" ]]; then
+      # https://docs.docker.com/engine/install/rhel/ - currently broken
+      log "[ERROR] docker must be installed as a prereq on RHEL. Exiting."
+      exit_script 4
+    fi
+    systemctl enable --now docker.service
+  fi
+  %{~ endif ~}
+  %{~ endif ~}
+
+  %{~ if product == "tfefdo" || product == "consul" ~}
+  if have_program docker; then
+    log "[INFO] Detected 'docker' is already installed. Skipping."
+  else
+    if [[ "$OS_DISTRO" == "ubuntu" ]]; then
+      # https://docs.docker.com/engine/install/ubuntu/
+      log "[INFO] Installing Docker for Ubuntu (Focal)."
+      curl -fsSL https://download.docker.com/linux/ubuntu/gpg | gpg --dearmor -o /usr/share/keyrings/docker-archive-keyring.gpg
+      echo \
+      "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/docker-archive-keyring.gpg] https://download.docker.com/linux/ubuntu \
+      $(lsb_release -cs) stable" | tee /etc/apt/sources.list.d/docker.list > /dev/null
+      $package_manager update -y
+      DOCKER_VERSION="5:${docker_version}-1~ubuntu.$(lsb_release -r | awk '{print $2}')~$(lsb_release -cs)"
+      $package_manager install -y docker-ce="$${DOCKER_VERSION}" docker-ce-cli=$${DOCKER_VERSION} containerd.io docker-compose-plugin
+    elif [[ "$OS_DISTRO" == "centos" ]]; then
+      # https://docs.docker.com/engine/install/centos/
+      log "[INFO] Installing Docker for CentOS."
+      DOCKER_VERSION="${docker_version}"
+      $package_manager install -y yum-utils
+      yum-config-manager --add-repo https://download.docker.com/linux/centos/docker-ce.repo
+      $package_manager install -y docker-ce-$${DOCKER_VERSION}-1.el7 docker-ce-$${DOCKER_VERSION}-1.el7 containerd.io
+    elif [[ "$OS_DISTRO" == "red" ]]; then
+      # https://docs.docker.com/engine/install/rhel/ - currently broken
+      log "[ERROR] docker must be installed as a prereq on RHEL. Exiting."
+      exit_script 4
+    fi
+    systemctl enable --now docker.service
+  fi
+  %{~ endif ~}
+}

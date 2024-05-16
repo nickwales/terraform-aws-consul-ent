@@ -1,0 +1,13 @@
+function exit_script {
+  ASG_NAME="$(aws ec2 describe-instances --instance-ids "$INSTANCE_ID" --query "Reservations[].Instances[].Tags[?Key=='aws:autoscaling:groupName'].Value" --output text)"
+  ASG_HOOK_VALUE="$(aws ec2 describe-instances --instance-ids "$INSTANCE_ID" --query "Reservations[].Instances[].Tags[?Key=='asg-hook'].Value" --output text)"
+  if [[ "$1" == 0 ]]; then
+    aws autoscaling complete-lifecycle-action --lifecycle-action-result CONTINUE --instance-id $INSTANCE_ID --lifecycle-hook-name $ASG_HOOK_VALUE --auto-scaling-group-name $ASG_NAME
+    log "[INFO] user_data script finished successfully!"
+  else
+    aws autoscaling complete-lifecycle-action --lifecycle-action-result ABANDON --instance-id $INSTANCE_ID --lifecycle-hook-name $ASG_HOOK_VALUE --auto-scaling-group-name $ASG_NAME
+    log "[ERROR] user_data script finished with error code $1."
+  fi
+  sleep 15
+  exit "$1"
+}

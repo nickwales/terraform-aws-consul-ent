@@ -1,0 +1,20 @@
+function retrieve_file_from_obj {
+  local STORAGE_ACCOUNT="$1"
+  local OBJ_PATH="$2"
+  local CONTAINER="$(echo $OBJ_PATH | cut -d "/" -f 1)"
+  local FILENAME="$(echo $OBJ_PATH | cut -d "/" -f 2)"
+  local DEST="$3"
+
+  if [[ "$OBJ_PATH" == "" ]]; then
+    log "[ERROR] Did not detect a valid blob path."
+    exit_script 10
+  else
+    log "[INFO] Copying '$OBJ_PATH' to '$DEST'..."
+    az storage blob download \
+      --account-name "$STORAGE_ACCOUNT" \
+      --container-name "$CONTAINER" \
+      --name "$FILENAME" \
+      --file "$DEST" \
+      --auth-mode login
+  fi
+}
